@@ -42,9 +42,16 @@ MP4_SHARED_DEPS = \
 	build/lame/dist/lib/libmp3lame.so \
 	build/x264/dist/lib/libx264.so
 
-all: webm mp4
+MPEG_MUXERS = mpegts null
+MPEG_ENCODERS = mpeg1video
+FFMPEG_MPEG_BC = build/ffmpeg-mpeg/ffmpeg.bc
+FFMPEG_MPEG_PC_PATH =
+MPEG_SHARED_DEPS =
+
+all: webm mp4 mpeg
 webm: ffmpeg-webm.js ffmpeg-worker-webm.js
 mp4: ffmpeg-mp4.js ffmpeg-worker-mp4.js
+mpeg: ffmpeg-mpeg.js ffmpeg-worker-mpeg.js
 
 clean: clean-js \
 	clean-freetype clean-fribidi clean-libass \
@@ -70,6 +77,8 @@ clean-ffmpeg-webm:
 	-cd build/ffmpeg-webm && rm -f ffmpeg.bc && make clean
 clean-ffmpeg-mp4:
 	-cd build/ffmpeg-mp4 && rm -f ffmpeg.bc && make clean
+clean-ffmpeg-mpeg:
+	-cd build/ffmpeg-mpeg && rm -f ffmpeg.bc && make clean
 
 build/opus/configure:
 	cd build/opus && ./autogen.sh
@@ -301,6 +310,19 @@ build/ffmpeg-mp4/ffmpeg.bc: $(MP4_SHARED_DEPS)
 	emmake make -j8 && \
 	cp ffmpeg ffmpeg.bc
 
+build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
+	cd build/ffmpeg-mpeg && \
+	git reset --hard && \
+	patch -p1 < ../ffmpeg-disable-arc4random.patch && \
+	patch -p1 < ../ffmpeg-disable-monotonic.patch && \
+	EM_PKG_CONFIG_PATH=$(FFMPEG_MPEG_PC_PATH) emconfigure ./configure \
+		$(FFMPEG_COMMON_ARGS) \
+		$(addprefix --enable-encoder=,$(MPEG_ENCODERS)) \
+		$(addprefix --enable-muxer=,$(MPEG_MUXERS)) \
+		&& \
+	emmake make -j8 && \
+	cp ffmpeg ffmpeg.bc
+
 # Compile bitcode to JavaScript.
 # NOTE(Kagami): Bump heap size to 64M, default 16M is not enough even
 # for simple tests and 32M tends to run slower than 64M.
@@ -329,5 +351,15 @@ ffmpeg-mp4.js: $(FFMPEG_MP4_BC) $(PRE_JS) $(POST_JS_SYNC)
 
 ffmpeg-worker-mp4.js: $(FFMPEG_MP4_BC) $(PRE_JS) $(POST_JS_WORKER)
 	emcc $(FFMPEG_MP4_BC) $(MP4_SHARED_DEPS) \
+		--post-js $(POST_JS_WORKER) \
+		$(EMCC_COMMON_ARGS)
+
+ffmpeg-mpeg.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_SYNC)
+	emcc $(FFMPEG_MPEG_BC) $(MPEG_SHARED_DEPS) \
+		--post-js $(POST_JS_SYNC) \
+		$(EMCC_COMMON_ARGS)
+
+ffmpeg-worker-mpeg.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_WORKER)
+	emcc $(FFMPEG_MPEG_BC) $(MPEG_SHARED_DEPS) \
 		--post-js $(POST_JS_WORKER) \
 		$(EMCC_COMMON_ARGS)
