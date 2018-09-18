@@ -3,6 +3,7 @@
 # <https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>.
 
 PRE_JS = build/pre.js
+LIBRARY_JS = build/library.js
 POST_JS_SYNC = build/post-sync.js
 POST_JS_WORKER = build/post-worker.js
 
@@ -315,10 +316,18 @@ build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
 	git reset --hard && \
 	patch -p1 < ../ffmpeg-disable-arc4random.patch && \
 	patch -p1 < ../ffmpeg-disable-monotonic.patch && \
+	patch -p1 < ../ffmpeg-async-stdin-stdout.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_MPEG_PC_PATH) emconfigure ./configure \
 		$(FFMPEG_COMMON_ARGS) \
+		$(addprefix --disable-decoder=,$(COMMON_DECODERS)) \
+		$(addprefix --disable-demuxer=,$(COMMON_DEMUXERS)) \
 		$(addprefix --enable-encoder=,$(MPEG_ENCODERS)) \
 		$(addprefix --enable-muxer=,$(MPEG_MUXERS)) \
+		--enable-demuxer=rawvideo \
+		--enable-decoder=rawvideo \
+		--enable-network \
+		--enable-protocol=http \
+		--enable-protocol=pipe \
 		&& \
 	emmake make -j8 && \
 	cp ffmpeg ffmpeg.bc
@@ -333,6 +342,12 @@ EMCC_COMMON_ARGS = \
 	-O3 --memory-init-file 0 \
 	--pre-js $(PRE_JS) \
 	-o $@
+
+EMCC_MPEG_ARGS = \
+	-s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 \
+	-s EMTERPRETIFY_WHITELIST='["_main","_ffmpeg_parse_options","_open_files","_open_input_file","_avformat_open_input","_ff_id3v2_read","_id3v2_read_internal","_avio_read","_fill_buffer","_io_read_packet","_ffurl_read","_file_read","_avformat_find_stream_info","_read_frame_internal","_ff_read_packet","_rawvideo_read_packet","_av_get_packet","_append_packet_chunked","_transcode","_av_read_frame"]' \
+	-s WASM=0 \
+	--js-library $(LIBRARY_JS)
 
 ffmpeg-webm.js: $(FFMPEG_WEBM_BC) $(PRE_JS) $(POST_JS_SYNC)
 	emcc $(FFMPEG_WEBM_BC) $(WEBM_SHARED_DEPS) \
@@ -357,9 +372,11 @@ ffmpeg-worker-mp4.js: $(FFMPEG_MP4_BC) $(PRE_JS) $(POST_JS_WORKER)
 ffmpeg-mpeg.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_SYNC)
 	emcc $(FFMPEG_MPEG_BC) $(MPEG_SHARED_DEPS) \
 		--post-js $(POST_JS_SYNC) \
-		$(EMCC_COMMON_ARGS)
+		$(EMCC_COMMON_ARGS) \
+		$(EMCC_MPEG_ARGS)
 
 ffmpeg-worker-mpeg.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_WORKER)
 	emcc $(FFMPEG_MPEG_BC) $(MPEG_SHARED_DEPS) \
 		--post-js $(POST_JS_WORKER) \
-		$(EMCC_COMMON_ARGS)
+		$(EMCC_COMMON_ARGS) \
+		$(EMCC_MPEG_ARGS)
