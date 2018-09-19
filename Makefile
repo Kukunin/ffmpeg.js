@@ -325,15 +325,11 @@ build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
 		$(addprefix --disable-filter=,$(COMMON_FILTERS)) \
 		$(addprefix --enable-encoder=,$(MPEG_ENCODERS)) \
 		$(addprefix --enable-muxer=,$(MPEG_MUXERS)) \
-		--disable-swresample \
-		--disable-muxer=adts \
-		--disable-muxer=latm \
-		--enable-filter=format \
+		--enable-filter=scale \
 		--enable-demuxer=rawvideo \
 		--enable-decoder=rawvideo \
-		--enable-network \
-		--enable-protocol=http \
 		--enable-protocol=pipe \
+		--enable-sse2 \
 		&& \
 	emmake make -j8 && \
 	cp ffmpeg ffmpeg.bc

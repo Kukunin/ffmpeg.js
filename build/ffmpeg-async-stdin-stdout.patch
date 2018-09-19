@@ -1,17 +1,18 @@
 diff --git a/libavformat/file.c b/libavformat/file.c
-index 264542a..611fcce 100644
+index 264542a..87b9337 100644
 --- a/libavformat/file.c
 +++ b/libavformat/file.c
-@@ -38,6 +38,8 @@
+@@ -38,6 +38,9 @@
  #include "os_support.h"
  #include "url.h"
  
 +extern int emscripten_binary_read(unsigned char* buf, int size);
++extern int emscripten_binary_write(const uint8_t* buf, int size);
 +
  /* Some systems may not have S_ISFIFO */
  #ifndef S_ISFIFO
  #  ifdef S_IFIFO
-@@ -109,7 +111,11 @@ static int file_read(URLContext *h, unsigned char *buf, int size)
+@@ -109,7 +112,11 @@ static int file_read(URLContext *h, unsigned char *buf, int size)
      FileContext *c = h->priv_data;
      int ret;
      size = FFMIN(size, c->blocksize);
@@ -24,194 +25,15 @@ index 264542a..611fcce 100644
      if (ret == 0 && c->follow)
          return AVERROR(EAGAIN);
      return (ret == -1) ? AVERROR(errno) : ret;
-diff --git a/libavformat/tcp.c b/libavformat/tcp.c
-index c105479..5e8aa7f 100644
---- a/libavformat/tcp.c
-+++ b/libavformat/tcp.c
-@@ -31,6 +31,9 @@
- #if HAVE_POLL_H
- #include <poll.h>
- #endif
-+#include<stdio.h>
-+
-+extern int emscripten_binary_write(const uint8_t* buf, int size);
- 
- typedef struct TCPContext {
-     const AVClass *class;
-@@ -65,136 +68,11 @@ static const AVClass tcp_class = {
- /* return non zero if error */
- static int tcp_open(URLContext *h, const char *uri, int flags)
- {
--    struct addrinfo hints = { 0 }, *ai, *cur_ai;
--    int port, fd = -1;
--    TCPContext *s = h->priv_data;
--    const char *p;
--    char buf[256];
--    int ret;
--    char hostname[1024],proto[1024],path[1024];
--    char portstr[10];
--    s->open_timeout = 5000000;
--
--    av_url_split(proto, sizeof(proto), NULL, 0, hostname, sizeof(hostname),
--        &port, path, sizeof(path), uri);
--    if (strcmp(proto, "tcp"))
--        return AVERROR(EINVAL);
--    if (port <= 0 || port >= 65536) {
--        av_log(h, AV_LOG_ERROR, "Port missing in uri\n");
--        return AVERROR(EINVAL);
--    }
--    p = strchr(uri, '?');
--    if (p) {
--        if (av_find_info_tag(buf, sizeof(buf), "listen", p)) {
--            char *endptr = NULL;
--            s->listen = strtol(buf, &endptr, 10);
--            /* assume if no digits were found it is a request to enable it */
--            if (buf == endptr)
--                s->listen = 1;
--        }
--        if (av_find_info_tag(buf, sizeof(buf), "timeout", p)) {
--            s->rw_timeout = strtol(buf, NULL, 10);
--        }
--        if (av_find_info_tag(buf, sizeof(buf), "listen_timeout", p)) {
--            s->listen_timeout = strtol(buf, NULL, 10);
--        }
--    }
--    if (s->rw_timeout >= 0) {
--        s->open_timeout =
--        h->rw_timeout   = s->rw_timeout;
--    }
--    hints.ai_family = AF_UNSPEC;
--    hints.ai_socktype = SOCK_STREAM;
--    snprintf(portstr, sizeof(portstr), "%d", port);
--    if (s->listen)
--        hints.ai_flags |= AI_PASSIVE;
--    if (!hostname[0])
--        ret = getaddrinfo(NULL, portstr, &hints, &ai);
--    else
--        ret = getaddrinfo(hostname, portstr, &hints, &ai);
--    if (ret) {
--        av_log(h, AV_LOG_ERROR,
--               "Failed to resolve hostname %s: %s\n",
--               hostname, gai_strerror(ret));
--        return AVERROR(EIO);
--    }
--
--    cur_ai = ai;
--
-- restart:
--    fd = ff_socket(cur_ai->ai_family,
--                   cur_ai->ai_socktype,
--                   cur_ai->ai_protocol);
--    if (fd < 0) {
--        ret = ff_neterrno();
--        goto fail;
--    }
--
--    if (s->listen == 2) {
--        // multi-client
--        if ((ret = ff_listen(fd, cur_ai->ai_addr, cur_ai->ai_addrlen)) < 0)
--            goto fail1;
--    } else if (s->listen == 1) {
--        // single client
--        if ((ret = ff_listen_bind(fd, cur_ai->ai_addr, cur_ai->ai_addrlen,
--                                  s->listen_timeout, h)) < 0)
--            goto fail1;
--        // Socket descriptor already closed here. Safe to overwrite to client one.
--        fd = ret;
--    } else {
--        if ((ret = ff_listen_connect(fd, cur_ai->ai_addr, cur_ai->ai_addrlen,
--                                     s->open_timeout / 1000, h, !!cur_ai->ai_next)) < 0) {
--
--            if (ret == AVERROR_EXIT)
--                goto fail1;
--            else
--                goto fail;
--        }
--    }
--
--    h->is_streamed = 1;
--    s->fd = fd;
--    /* Set the socket's send or receive buffer sizes, if specified.
--       If unspecified or setting fails, system default is used. */
--    if (s->recv_buffer_size > 0) {
--        setsockopt (fd, SOL_SOCKET, SO_RCVBUF, &s->recv_buffer_size, sizeof (s->recv_buffer_size));
--    }
--    if (s->send_buffer_size > 0) {
--        setsockopt (fd, SOL_SOCKET, SO_SNDBUF, &s->send_buffer_size, sizeof (s->send_buffer_size));
--    }
--
--    freeaddrinfo(ai);
-     return 0;
--
-- fail:
--    if (cur_ai->ai_next) {
--        /* Retry with the next sockaddr */
--        cur_ai = cur_ai->ai_next;
--        if (fd >= 0)
--            closesocket(fd);
--        ret = 0;
--        goto restart;
--    }
-- fail1:
--    if (fd >= 0)
--        closesocket(fd);
--    freeaddrinfo(ai);
--    return ret;
- }
- 
- static int tcp_accept(URLContext *s, URLContext **c)
- {
--    TCPContext *sc = s->priv_data;
--    TCPContext *cc;
--    int ret;
--    av_assert0(sc->listen);
--    if ((ret = ffurl_alloc(c, s->filename, s->flags, &s->interrupt_callback)) < 0)
--        return ret;
--    cc = (*c)->priv_data;
--    ret = ff_accept(sc->fd, sc->listen_timeout, s);
--    if (ret < 0)
--        return ff_neterrno();
--    cc->fd = ret;
-     return 0;
- }
- 
-@@ -214,37 +92,17 @@ static int tcp_read(URLContext *h, uint8_t *buf, int size)
- 
- static int tcp_write(URLContext *h, const uint8_t *buf, int size)
- {
--    TCPContext *s = h->priv_data;
+@@ -120,6 +127,10 @@ static int file_write(URLContext *h, const unsigned char *buf, int size)
+     FileContext *c = h->priv_data;
      int ret;
--
--    if (!(h->flags & AVIO_FLAG_NONBLOCK)) {
--        ret = ff_network_wait_fd_timeout(s->fd, 1, h->rw_timeout, &h->interrupt_callback);
--        if (ret)
--            return ret;
--    }
--    ret = send(s->fd, buf, size, MSG_NOSIGNAL);
-+    ret = emscripten_binary_write(buf, size);
-     return ret < 0 ? ff_neterrno() : ret;
- }
- 
- static int tcp_shutdown(URLContext *h, int flags)
- {
--    TCPContext *s = h->priv_data;
--    int how;
--
--    if (flags & AVIO_FLAG_WRITE && flags & AVIO_FLAG_READ) {
--        how = SHUT_RDWR;
--    } else if (flags & AVIO_FLAG_WRITE) {
--        how = SHUT_WR;
--    } else {
--        how = SHUT_RD;
--    }
--
--    return shutdown(s->fd, how);
-+    return 0;
- }
- 
- static int tcp_close(URLContext *h)
- {
--    TCPContext *s = h->priv_data;
--    closesocket(s->fd);
-     return 0;
+     size = FFMIN(size, c->blocksize);
+-    ret = write(c->fd, buf, size);
++    if(c->fd == 1) {
++      ret = emscripten_binary_write(buf, size);
++    } else {
++      ret = write(c->fd, buf, size);
++    }
+     return (ret == -1) ? AVERROR(errno) : ret;
  }
