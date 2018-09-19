@@ -6,7 +6,7 @@ index 264542a..611fcce 100644
  #include "os_support.h"
  #include "url.h"
  
-+extern int emscripten_stdin_async(unsigned char* buf, int size);
++extern int emscripten_binary_read(unsigned char* buf, int size);
 +
  /* Some systems may not have S_ISFIFO */
  #ifndef S_ISFIFO
@@ -17,7 +17,7 @@ index 264542a..611fcce 100644
      size = FFMIN(size, c->blocksize);
 -    ret = read(c->fd, buf, size);
 +    if(c->fd == 0) {
-+      ret = emscripten_stdin_async(buf, size);
++      ret = emscripten_binary_read(buf, size);
 +    } else {
 +      ret = read(c->fd, buf, size);
 +    }
@@ -25,18 +25,20 @@ index 264542a..611fcce 100644
          return AVERROR(EAGAIN);
      return (ret == -1) ? AVERROR(errno) : ret;
 diff --git a/libavformat/tcp.c b/libavformat/tcp.c
-index c105479..7afcada 100644
+index c105479..5e8aa7f 100644
 --- a/libavformat/tcp.c
 +++ b/libavformat/tcp.c
-@@ -31,6 +31,7 @@
+@@ -31,6 +31,9 @@
  #if HAVE_POLL_H
  #include <poll.h>
  #endif
 +#include<stdio.h>
++
++extern int emscripten_binary_write(const uint8_t* buf, int size);
  
  typedef struct TCPContext {
      const AVClass *class;
-@@ -65,136 +66,11 @@ static const AVClass tcp_class = {
+@@ -65,136 +68,11 @@ static const AVClass tcp_class = {
  /* return non zero if error */
  static int tcp_open(URLContext *h, const char *uri, int flags)
  {
@@ -173,7 +175,7 @@ index c105479..7afcada 100644
      return 0;
  }
  
-@@ -214,37 +90,17 @@ static int tcp_read(URLContext *h, uint8_t *buf, int size)
+@@ -214,37 +92,17 @@ static int tcp_read(URLContext *h, uint8_t *buf, int size)
  
  static int tcp_write(URLContext *h, const uint8_t *buf, int size)
  {
@@ -186,7 +188,7 @@ index c105479..7afcada 100644
 -            return ret;
 -    }
 -    ret = send(s->fd, buf, size, MSG_NOSIGNAL);
-+    ret = fwrite(buf, sizeof(*buf), size, stdout);
++    ret = emscripten_binary_write(buf, size);
      return ret < 0 ? ff_neterrno() : ret;
  }
  
