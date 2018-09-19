@@ -1,8 +1,3 @@
-  return __ffmpegjs_return;
-}
-
-var __ffmpegjs_running = false;
-
 self.onmessage = function(e) {
   function makeOutHandler(cb) {
     var buf = [];
@@ -63,4 +58,4 @@ self.onmessage = function(e) {
   }
 };
 
-self.postMessage({"type": "ready"});
+__ffmpegjs['ready'](function() { self.postMessage({"type": "ready"}); });

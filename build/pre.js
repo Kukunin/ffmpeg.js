@@ -1,10 +1,19 @@
 var __ffmpegjs_utf8ToStr;
 
+var __ffmpegjs_print = function() {};
+var __ffmpegjs_printErr = function() {};
+var __ffmpegjs_initialized = false;
+
+Module = {
+  'print': function(line) { debugger; __ffmpegjs_print(line); },
+  'printErr': function(line) { __ffmpegjs_printErr(line); },
+  'onRuntimeInitialized': function() { __ffmpegjs_initialized = true; }
+};
+
 function __ffmpegjs(__ffmpegjs_opts) {
   __ffmpegjs_utf8ToStr = UTF8ArrayToString;
   __ffmpegjs_opts = __ffmpegjs_opts || {};
   var __ffmpegjs_return;
-  var Module = {};
 
   function __ffmpegjs_toU8(data) {
     if (Array.isArray(data) || data instanceof ArrayBuffer) {
@@ -20,10 +29,13 @@ function __ffmpegjs(__ffmpegjs_opts) {
   }
 
   Object.keys(__ffmpegjs_opts).forEach(function(key) {
-    if (key != "mounts" && key != "MEMFS") {
+    if (['mounts', 'MEMFS', 'arguments', 'print', 'printErr'].indexOf(key) === -1) {
       Module[key] = __ffmpegjs_opts[key];
     }
   });
+
+  if('print' in __ffmpegjs_opts) __ffmpegjs_print = __ffmpegjs_opts['print'];
+  if('printErr' in __ffmpegjs_opts) __ffmpegjs_printErr = __ffmpegjs_opts['printErr'];
 
   // XXX(Kagami): Prevent Emscripten to call `process.exit` at the end of
   // execution on Node.
@@ -108,3 +120,15 @@ function __ffmpegjs(__ffmpegjs_opts) {
     });
     __ffmpegjs_return = {"MEMFS": outFiles};
   };
+  Module['callMain'](__ffmpegjs_opts["arguments"] || []);
+
+  return __ffmpegjs_return;
+}
+
+__ffmpegjs['ready'] = function(fn) {
+  if(__ffmpegjs_initialized) {
+    fn();
+  } else {
+    Module["onRuntimeInitialized"] = fn;
+  }
+};
