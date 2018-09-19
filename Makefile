@@ -322,8 +322,13 @@ build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
 		$(FFMPEG_COMMON_ARGS) \
 		$(addprefix --disable-decoder=,$(COMMON_DECODERS)) \
 		$(addprefix --disable-demuxer=,$(COMMON_DEMUXERS)) \
+		$(addprefix --disable-filter=,$(COMMON_FILTERS)) \
 		$(addprefix --enable-encoder=,$(MPEG_ENCODERS)) \
 		$(addprefix --enable-muxer=,$(MPEG_MUXERS)) \
+		--disable-swresample \
+		--disable-muxer=adts \
+		--disable-muxer=latm \
+		--enable-filter=format \
 		--enable-demuxer=rawvideo \
 		--enable-decoder=rawvideo \
 		--enable-network \
