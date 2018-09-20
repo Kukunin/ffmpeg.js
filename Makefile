@@ -52,7 +52,7 @@ MPEG_SHARED_DEPS =
 all: webm mp4 mpeg
 webm: ffmpeg-webm.js ffmpeg-worker-webm.js
 mp4: ffmpeg-mp4.js ffmpeg-worker-mp4.js
-mpeg: ffmpeg-mpeg.js ffmpeg-worker-mpeg.js
+mpeg: ffmpeg-mpeg.js ffmpeg-mpeg.asm.js ffmpeg-worker-mpeg.js
 
 clean: clean-js \
 	clean-freetype clean-fribidi clean-libass \
@@ -341,9 +341,12 @@ EMCC_COMMON_ARGS = \
 	-s TOTAL_MEMORY=67108864 \
 	-s INVOKE_RUN=0 \
 	-O3 --memory-init-file 0 \
-	-s WASM=1 -s "BINARYEN_TRAP_MODE='clamp'" -s "BINARYEN_METHOD='native-wasm,asmjs'" \
 	--pre-js $(PRE_JS) \
+	-s WASM=1 -s "BINARYEN_TRAP_MODE='clamp'" -s "BINARYEN_METHOD='native-wasm'" \
 	-o $@
+
+EMCC_ASMJS_ARGS = \
+  -s WASM=0
 
 EMCC_MPEG_ARGS = \
 	-s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 \
@@ -374,6 +377,13 @@ ffmpeg-mpeg.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_SYNC)
 	emcc $(FFMPEG_MPEG_BC) $(MPEG_SHARED_DEPS) \
 		--post-js $(POST_JS_SYNC) \
 		$(EMCC_COMMON_ARGS) \
+		$(EMCC_MPEG_ARGS)
+
+ffmpeg-mpeg.asm.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_SYNC)
+	emcc $(FFMPEG_MPEG_BC) $(MPEG_SHARED_DEPS) \
+		--post-js $(POST_JS_SYNC) \
+		$(EMCC_COMMON_ARGS) \
+		$(EMCC_ASMJS_ARGS) \
 		$(EMCC_MPEG_ARGS)
 
 ffmpeg-worker-mpeg.js: $(FFMPEG_MPEG_BC) $(PRE_JS) $(POST_JS_WORKER)
