@@ -341,7 +341,7 @@ EMCC_COMMON_ARGS = \
 	-s TOTAL_MEMORY=67108864 \
 	-s INVOKE_RUN=0 \
 	-O3 --memory-init-file 0 \
-	-s WASM=1 -s "BINARYEN_TRAP_MODE='clamp'" -s "BINARYEN_METHOD='native-wasm'" \
+	-s WASM=1 -s "BINARYEN_TRAP_MODE='clamp'" -s "BINARYEN_METHOD='native-wasm,asmjs'" \
 	--pre-js $(PRE_JS) \
 	-o $@
 
