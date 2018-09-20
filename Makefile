@@ -258,7 +258,6 @@ FFMPEG_COMMON_ARGS = \
 	--disable-d3d11va \
 	--disable-dxva2 \
 	--disable-vaapi \
-	--disable-vda \
 	--disable-vdpau \
 	$(addprefix --enable-decoder=,$(COMMON_DECODERS)) \
 	$(addprefix --enable-demuxer=,$(COMMON_DEMUXERS)) \
@@ -268,7 +267,7 @@ FFMPEG_COMMON_ARGS = \
 	--disable-iconv \
 	--disable-libxcb \
 	--disable-lzma \
-	--disable-sdl \
+	--disable-sdl2 \
 	--disable-securetransport \
 	--disable-xlib \
 	--disable-zlib
@@ -278,7 +277,6 @@ build/ffmpeg-webm/ffmpeg.bc: $(WEBM_SHARED_DEPS)
 	git reset --hard && \
 	patch -p1 < ../ffmpeg-disable-arc4random.patch && \
 	patch -p1 < ../ffmpeg-default-font.patch && \
-	patch -p1 < ../ffmpeg-disable-monotonic.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_WEBM_PC_PATH) emconfigure ./configure \
 		$(FFMPEG_COMMON_ARGS) \
 		$(addprefix --enable-encoder=,$(WEBM_ENCODERS)) \
@@ -297,7 +295,6 @@ build/ffmpeg-mp4/ffmpeg.bc: $(MP4_SHARED_DEPS)
 	cd build/ffmpeg-mp4 && \
 	git reset --hard && \
 	patch -p1 < ../ffmpeg-disable-arc4random.patch && \
-	patch -p1 < ../ffmpeg-disable-monotonic.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_MP4_PC_PATH) emconfigure ./configure \
 		$(FFMPEG_COMMON_ARGS) \
 		$(addprefix --enable-encoder=,$(MP4_ENCODERS)) \
@@ -315,7 +312,6 @@ build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
 	cd build/ffmpeg-mpeg && \
 	git reset --hard && \
 	patch -p1 < ../ffmpeg-disable-arc4random.patch && \
-	patch -p1 < ../ffmpeg-disable-monotonic.patch && \
 	patch -p1 < ../ffmpeg-async-stdin-stdout.patch && \
 	patch -p1 < ../ffmpeg-always-use-newlines.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_MPEG_PC_PATH) emconfigure ./configure \
@@ -326,8 +322,12 @@ build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
 		$(addprefix --enable-encoder=,$(MPEG_ENCODERS)) \
 		$(addprefix --enable-muxer=,$(MPEG_MUXERS)) \
 		--enable-filter=scale \
-		--enable-decoder=rawvideo --enable-demuxer=rawvideo \
-		--enable-demuxer=image2pipe --enable-parser=mjpeg --enable-decoder=mjpeg --enable-demuxer=mjpeg \
+		--enable-decoder=rawvideo \
+		--enable-demuxer=rawvideo \
+		--enable-demuxer=image2pipe \
+		--enable-parser=mjpeg \
+		--enable-decoder=mjpeg \
+		--enable-demuxer=mjpeg \
 		--enable-protocol=pipe \
 		&& \
 	emmake make -j8 && \
