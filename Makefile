@@ -343,6 +343,7 @@ EMCC_COMMON_ARGS = \
 	-O3 --memory-init-file 0 \
 	--pre-js $(PRE_JS) \
 	-s WASM=1 -s "BINARYEN_TRAP_MODE='clamp'" -s "BINARYEN_METHOD='native-wasm'" \
+	-s EXTRA_EXPORTED_RUNTIME_METHODS='["callMain"]' \
 	-o $@
 
 EMCC_ASMJS_ARGS = \
