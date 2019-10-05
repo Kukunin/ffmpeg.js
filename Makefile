@@ -314,6 +314,7 @@ build/ffmpeg-mpeg/ffmpeg.bc: $(MPEG_SHARED_DEPS)
 	patch -p1 < ../ffmpeg-disable-arc4random.patch && \
 	patch -p1 < ../ffmpeg-async-stdin-stdout.patch && \
 	patch -p1 < ../ffmpeg-always-use-newlines.patch && \
+	patch -p1 < ../ffmpeg-noinline.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_MPEG_PC_PATH) emconfigure ./configure \
 		$(FFMPEG_COMMON_ARGS) \
 		$(addprefix --disable-decoder=,$(COMMON_DECODERS)) \
@@ -351,7 +352,7 @@ EMCC_ASMJS_ARGS = \
 
 EMCC_MPEG_ARGS = \
 	-s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 \
-	-s EMTERPRETIFY_WHITELIST='["_main","_ffmpeg_parse_options","_open_files","_open_input_file","_avformat_open_input","_ff_id3v2_read","_id3v2_read_internal","_avio_read","_fill_buffer","_io_read_packet","_ffurl_read","_file_read","_avformat_find_stream_info","_read_frame_internal","_ff_read_packet","_ff_img_read_packet","_rawvideo_read_packet","_av_get_packet","_append_packet_chunked","_transcode","_av_read_frame"]' \
+	-s EMTERPRETIFY_WHITELIST='["_main","_ffmpeg_parse_options","_open_files","_open_input_file","_avformat_open_input","_ff_id3v2_read_dict","_ff_id3v2_read","_id3v2_read_internal","_avio_read","_fill_buffer","_io_read_packet","_ffurl_read","_file_read","_avformat_find_stream_info","_read_frame_internal","_ff_read_packet","_ff_img_read_packet","_rawvideo_read_packet","_av_get_packet","_append_packet_chunked","_transcode","_av_read_frame"]' \
 	--js-library $(LIBRARY_JS)
 
 ffmpeg-webm.js: $(FFMPEG_WEBM_BC) $(PRE_JS) $(POST_JS_SYNC)

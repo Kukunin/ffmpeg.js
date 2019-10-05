@@ -1,0 +1,31 @@
+diff --git a/libavcodec/motion_est.c b/libavcodec/motion_est.c
+index 759eea479d..fb16f78586 100644
+--- a/libavcodec/motion_est.c
++++ b/libavcodec/motion_est.c
+@@ -104,7 +104,7 @@ static int get_flags(MotionEstContext *c, int direct, int chroma){
+            + (chroma ? FLAG_CHROMA : 0);
+ }
+
+-static av_always_inline int cmp_direct_inline(MpegEncContext *s, const int x, const int y, const int subx, const int suby,
++static int cmp_direct_inline(MpegEncContext *s, const int x, const int y, const int subx, const int suby,
+                       const int size, const int h, int ref_index, int src_index,
+                       me_cmp_func cmp_func, me_cmp_func chroma_cmp_func, int qpel){
+     MotionEstContext * const c= &s->me;
+@@ -176,7 +176,7 @@ static av_always_inline int cmp_direct_inline(MpegEncContext *s, const int x, co
+     return d;
+ }
+
+-static av_always_inline int cmp_inline(MpegEncContext *s, const int x, const int y, const int subx, const int suby,
++static int cmp_inline(MpegEncContext *s, const int x, const int y, const int subx, const int suby,
+                       const int size, const int h, int ref_index, int src_index,
+                       me_cmp_func cmp_func, me_cmp_func chroma_cmp_func, int qpel, int chroma){
+     MotionEstContext * const c= &s->me;
+@@ -257,6 +257,6 @@ static int cmp_internal(MpegEncContext *s, const int x, const int y, const int s
+ /** @brief compares a block (either a full macroblock or a partition thereof)
+     against a proposed motion-compensated prediction of that block
+  */
+-static av_always_inline int cmp(MpegEncContext *s, const int x, const int y, const int subx, const int suby,
++static int cmp(MpegEncContext *s, const int x, const int y, const int subx, const int suby,
+                       const int size, const int h, int ref_index, int src_index,
+                       me_cmp_func cmp_func, me_cmp_func chroma_cmp_func, const int flags){
+     if(av_builtin_constant_p(flags) && av_builtin_constant_p(h) && av_builtin_constant_p(size)
